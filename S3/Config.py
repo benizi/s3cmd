@@ -10,6 +10,7 @@ import os
 import sys
 import Progress
 from SortedDict import SortedDict
+from ConfigParser import RawConfigParser
 import httplib
 try:
     import json
@@ -205,14 +206,19 @@ class Config(object):
         return retval
 
     def read_config_file(self, configfile):
-        cp = ConfigParser(configfile)
-        for option in self.option_list():
-            self.update_option(option, cp.get(option))
+        defaults = dict([(opt, getattr(self, opt)) for opt in self.option_list()])
+        cp = RawConfigParser(defaults)
+        cp.read(configfile)
 
-        if cp.get('add_headers'):
-            for option in cp.get('add_headers').split(","):
-                (key, value) = option.split(':')
-                self.extra_headers[key.replace('_', '-').strip()] = value.strip()
+        for option in self.option_list():
+            self.update_option(option, cp.get('default', option))
+
+        if cp.has_option('default', 'add_headers'):
+            add_headers = cp.get('default', 'add_headers')
+            if len(add_headers) > 0:
+                for option in add_headers.split(","):
+                    (key, value) = option.split(':')
+                    self.extra_headers[key.replace('_', '-').strip()] = value.strip()
 
         self._parsed_files.append(configfile)
 
@@ -247,55 +253,6 @@ class Config(object):
                 error("Config: value of option '%s' must be an integer, not '%s'" % (option, value))
         else:                           # string
             setattr(Config, option, value)
-
-class ConfigParser(object):
-    def __init__(self, file, sections = []):
-        self.cfg = {}
-        self.parse_file(file, sections)
-
-    def parse_file(self, file, sections = []):
-        debug("ConfigParser: Reading file '%s'" % file)
-        if type(sections) != type([]):
-            sections = [sections]
-        in_our_section = True
-        f = open(file, "r")
-        r_comment = re.compile("^\s*#.*")
-        r_empty = re.compile("^\s*$")
-        r_section = re.compile("^\[([^\]]+)\]")
-        r_data = re.compile("^\s*(?P<key>\w+)\s*=\s*(?P<value>.*)")
-        r_quotes = re.compile("^\"(.*)\"\s*$")
-        for line in f:
-            if r_comment.match(line) or r_empty.match(line):
-                continue
-            is_section = r_section.match(line)
-            if is_section:
-                section = is_section.groups()[0]
-                in_our_section = (section in sections) or (len(sections) == 0)
-                continue
-            is_data = r_data.match(line)
-            if is_data and in_our_section:
-                data = is_data.groupdict()
-                if r_quotes.match(data["value"]):
-                    data["value"] = data["value"][1:-1]
-                self.__setitem__(data["key"], data["value"])
-                if data["key"] in ("access_key", "secret_key", "gpg_passphrase"):
-                    print_value = ("%s...%d_chars...%s") % (data["value"][:2], len(data["value"]) - 3, data["value"][-1:])
-                else:
-                    print_value = data["value"]
-                debug("ConfigParser: %s->%s" % (data["key"], print_value))
-                continue
-            warning("Ignoring invalid line in '%s': %s" % (file, line))
-
-    def __getitem__(self, name):
-        return self.cfg[name]
-
-    def __setitem__(self, name, value):
-        self.cfg[name] = value
-
-    def get(self, name, default = None):
-        if self.cfg.has_key(name):
-            return self.cfg[name]
-        return default
 
 class ConfigDumper(object):
     def __init__(self, stream):
