@@ -1897,6 +1897,7 @@ def main():
 
     optparser.add_option(      "--configure", dest="run_configure", action="store_true", help="Invoke interactive (re)configuration tool. Optionally use as '--configure s3://some-bucket' to test access to a specific bucket instead of attempting to list them all.")
     optparser.add_option("-c", "--config", dest="config", metavar="FILE", help="Config file name. Defaults to %default")
+    optparser.add_option("-C", "--config-section", dest="config_sections", metavar="SECTION", help="Extra configuration sections to parse (in addition to [default])")
     optparser.add_option(      "--dump-config", dest="dump_config", action="store_true", help="Dump current configuration after parsing config files and command line options and exit.")
     optparser.add_option(      "--access_key", dest="access_key", help="AWS Access Key")
     optparser.add_option(      "--secret_key", dest="secret_key", help="AWS Secret Key")
@@ -2032,6 +2033,10 @@ def main():
             error(u"Configuration file not available.")
             error(u"Consider using --configure parameter to create one.")
             sys.exit(1)
+
+    if options.config_sections:
+        for section in options.config_sections.split(','):
+            cfg.load_config_section(section)
 
     ## And again some logging level adjustments
     ## according to configfile and command line parameters

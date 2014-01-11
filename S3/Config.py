@@ -19,6 +19,7 @@ except ImportError, e:
 
 class Config(object):
     _instance = None
+    _parser = None
     _parsed_files = []
     _doc = {}
     access_key = ""
@@ -210,8 +211,8 @@ class Config(object):
         cp = RawConfigParser(defaults)
         cp.read(configfile)
 
-        for option in self.option_list():
-            self.update_option(option, cp.get('default', option))
+        self._parser = cp
+        self.load_config_section('default')
 
         if cp.has_option('default', 'add_headers'):
             add_headers = cp.get('default', 'add_headers')
@@ -221,6 +222,10 @@ class Config(object):
                     self.extra_headers[key.replace('_', '-').strip()] = value.strip()
 
         self._parsed_files.append(configfile)
+
+    def load_config_section(self, section):
+        for option in self.option_list():
+            self.update_option(option, self._parser.get(section, option))
 
     def dump_config(self, stream):
         ConfigDumper(stream).dump("default", self)
