@@ -2124,6 +2124,23 @@ def cmd_fixbucket(args):
         warning("them publicly readable if required.")
     return EX_OK
 
+def cmd_fogconfig(args):
+    try:
+        import json
+    except ImportError, e:
+        error("Can't generate JSON config without 'json' module")
+        raise
+    fog = { 'provider': 'AWS' }
+    fog['aws_access_key_id'] = cfg.access_key
+    fog['aws_secret_access_key'] = cfg.secret_key
+    for k,v in [args[i:i+2] for i in range(0, len(args), 2)]:
+        if v == 'yes' or v == 'true' or v == '1':
+            v = True
+        elif v == 'no' or v == 'false' or v == '0':
+            v = False
+        fog[k] = v
+    print json.dumps(fog)
+
 def resolve_list(lst, args):
     retval = []
     for item in lst:
@@ -2402,6 +2419,7 @@ def get_commands_list():
     {"cmd":"sign", "label":"Sign arbitrary string using the secret key", "param":"STRING-TO-SIGN", "func":cmd_sign, "argc":1},
     {"cmd":"signurl", "label":"Sign an S3 URL to provide limited public access with expiry", "param":"s3://BUCKET/OBJECT <expiry_epoch|+expiry_offset>", "func":cmd_signurl, "argc":2},
     {"cmd":"fixbucket", "label":"Fix invalid file names in a bucket", "param":"s3://BUCKET[/PREFIX]", "func":cmd_fixbucket, "argc":1},
+    {"cmd":"fogconfig", "label":"Print JSON config for Fog", "param":"", "func":cmd_fogconfig, "argc":0},
 
     ## Website commands
     {"cmd":"ws-create", "label":"Create Website from bucket", "param":"s3://BUCKET", "func":cmd_website_create, "argc":1},
