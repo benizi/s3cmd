@@ -13,7 +13,7 @@ import os
 import sys
 import Progress
 from SortedDict import SortedDict
-from ConfigParser import RawConfigParser
+from ConfigParser import NoOptionError, RawConfigParser
 import httplib
 import locale
 try:
@@ -262,8 +262,7 @@ class Config(object):
         return retval
 
     def read_config_file(self, configfile):
-        defaults = dict([(opt, getattr(self, opt)) for opt in self.option_list()])
-        cp = RawConfigParser(defaults)
+        cp = RawConfigParser()
         cp.read(configfile)
 
         self._parser = cp
@@ -271,11 +270,11 @@ class Config(object):
 
         # allow acl_public to be set from the config file too, even though by
         # default it is set to None, and not present in the config file.
-        if cp.get('default', 'acl_public'):
-            self.update_option('acl_public', cp.get('default', 'acl_public'))
+        if self.cp_get('acl_public'):
+            self.update_option('acl_public', self.cp_get('acl_public'))
 
         if cp.has_option('default', 'add_headers'):
-            add_headers = cp.get('default', 'add_headers')
+            add_headers = self.cp_get('add_headers')
             if len(add_headers) > 0:
                 for option in add_headers.split(","):
                     (key, value) = option.split(':')
@@ -283,9 +282,15 @@ class Config(object):
 
         self._parsed_files.append(configfile)
 
+    def cp_get(self, option, section='default'):
+        try:
+            return self._parser.get(section, option)
+        except NoOptionError:
+            return None
+
     def load_config_section(self, section):
         for option in self.option_list():
-            self.update_option(option, self._parser.get(section, option))
+            self.update_option(option, self.cp_get(option, section))
 
     def dump_config(self, stream):
         ConfigDumper(stream).dump("default", self)
