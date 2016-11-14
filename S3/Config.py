@@ -28,6 +28,9 @@ class Config(object):
     _doc = {}
     access_key = ""
     secret_key = ""
+    access_key_var = 'AWS_ACCESS'
+    secret_key_var = 'AWS_SECRET'
+    host_base_var = 'S3_HOST'
     access_token = ""
     _access_token_refresh = True
     host_base = "s3.amazonaws.com"

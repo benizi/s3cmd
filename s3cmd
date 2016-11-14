@@ -2150,9 +2150,8 @@ def cmd_env(args):
     else:
         cmd = ["env"]
 
-    env = dict(AWS_ACCESS = cfg.access_key,
-            AWS_SECRET = cfg.secret_key,
-            S3_HOST = cfg.host_base)
+    env = dict([(getattr(cfg, "%s_var" % k), getattr(cfg, k))
+                for k in ['access_key', 'secret_key', 'host_base']])
 
     os.execvpe(cmd[0], cmd, dict(os.environ.items() + env.items()))
 
@@ -2574,6 +2573,9 @@ def main():
     optparser.add_option(      "--access_key", dest="access_key", help="AWS Access Key")
     optparser.add_option(      "--secret_key", dest="secret_key", help="AWS Secret Key")
     optparser.add_option(      "--access_token", dest="access_token", help="AWS Access Token")
+    optparser.add_option(      "--access", dest="access_key_var", metavar="VAR_NAME", help="AWS Access Key in this var")
+    optparser.add_option(      "--secret", dest="secret_key_var", metavar="VAR_NAME", help="AWS Secret Key in this var")
+    optparser.add_option(      "--host-var", dest="host_base_var", metavar="VAR_NAME", help="S3 Hostname in this var")
 
     optparser.add_option("-n", "--dry-run", dest="dry_run", action="store_true", help="Only show what should be uploaded or downloaded but don't actually do it. May still perform S3 requests to get bucket listings and other information though (only for file transfer commands)")
 
