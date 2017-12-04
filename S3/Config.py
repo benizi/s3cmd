@@ -25,9 +25,9 @@ except ImportError:
 import locale
 try:
     # python 3 version
-    from configparser import NoOptionError, RawConfigParser
+    from configparser import NoOptionError, NoSectionError, RawConfigParser
 except ImportError:
-    from ConfigParser import NoOptionError, RawConfigParser
+    from ConfigParser import NoOptionError, NoSectionError, RawConfigParser
 
 try:
     unicode
@@ -53,6 +53,7 @@ class Config(object):
     _instance = None
     _parsed_files = []
     _doc = {}
+    _sections = None
     access_key = u""
     secret_key = u""
     access_token = u""
@@ -169,12 +170,13 @@ class Config(object):
     signurl_use_https = False
 
     ## Creating a singleton
-    def __new__(self, configfile = None, access_key=None, secret_key=None, access_token=None):
+    def __new__(self, configfile = None, access_key=None, secret_key=None, access_token=None, sections=None):
         if self._instance is None:
             self._instance = object.__new__(self)
         return self._instance
 
-    def __init__(self, configfile = None, access_key=None, secret_key=None, access_token=None):
+    def __init__(self, configfile = None, access_key=None, secret_key=None, access_token=None, sections=None):
+        self._sections = (sections or 'default').split(',')
         if configfile:
             try:
                 self.read_config_file(configfile)
@@ -291,7 +293,7 @@ class Config(object):
         return retval
 
     def read_config_file(self, configfile):
-        cp = ConfigParser(configfile)
+        cp = ConfigParser(configfile, self._sections)
         for option in self.option_list():
             _option = cp.get(option)
             if _option is not None:
@@ -376,20 +378,23 @@ class Config(object):
         setattr(Config, option, value)
 
 class ConfigParser(object):
-    def __init__(self, filename):
+    def __init__(self, filename, sections):
         try:
             cp = RawConfigParser(strict = False)
         except TypeError:
             cp = RawConfigParser()
         cp.read(filename)
-        self.cp = cp
+        self._cp = cp
+        self._sections = sections
 
-    def get(self, name, default = None, sections = []):
-        for section in sections + ['default']:
+    def get(self, name, default = None):
+        for section in self._sections:
             try:
                 return config_unicodise(self._cp.get(section, name))
             except NoOptionError:
                 pass
+            except NoSectionError:
+                raise Exception("Config: no config section '%s'" % section)
         return default
 
 class ConfigDumper(object):
