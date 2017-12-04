@@ -23,6 +23,11 @@ try:
 except ImportError:
     import http.client as httplib
 import locale
+try:
+    # python 3 version
+    from configparser import NoOptionError, RawConfigParser
+except ImportError:
+    from ConfigParser import NoOptionError, RawConfigParser
 
 try:
     unicode
@@ -371,52 +376,20 @@ class Config(object):
         setattr(Config, option, value)
 
 class ConfigParser(object):
-    def __init__(self, file, sections = []):
-        self.cfg = {}
-        self.parse_file(file, sections)
+    def __init__(self, filename):
+        try:
+            cp = RawConfigParser(strict = False)
+        except TypeError:
+            cp = RawConfigParser()
+        cp.read(filename)
+        self.cp = cp
 
-    def parse_file(self, file, sections = []):
-        debug("ConfigParser: Reading file '%s'" % file)
-        if type(sections) != type([]):
-            sections = [sections]
-        in_our_section = True
-        r_comment = re.compile("^\s*#.*")
-        r_empty = re.compile("^\s*$")
-        r_section = re.compile("^\[([^\]]+)\]")
-        r_data = re.compile("^\s*(?P<key>\w+)\s*=\s*(?P<value>.*)")
-        r_quotes = re.compile("^\"(.*)\"\s*$")
-        with io.open(file, "r", encoding=self.get('encoding', 'UTF-8')) as fp:
-            for line in fp:
-                if r_comment.match(line) or r_empty.match(line):
-                    continue
-                is_section = r_section.match(line)
-                if is_section:
-                    section = is_section.groups()[0]
-                    in_our_section = (section in sections) or (len(sections) == 0)
-                    continue
-                is_data = r_data.match(line)
-                if is_data and in_our_section:
-                    data = is_data.groupdict()
-                    if r_quotes.match(data["value"]):
-                        data["value"] = data["value"][1:-1]
-                    self.__setitem__(data["key"], data["value"])
-                    if data["key"] in ("access_key", "secret_key", "gpg_passphrase"):
-                        print_value = ("%s...%d_chars...%s") % (data["value"][:2], len(data["value"]) - 3, data["value"][-1:])
-                    else:
-                        print_value = data["value"]
-                    debug("ConfigParser: %s->%s" % (data["key"], print_value))
-                    continue
-                warning("Ignoring invalid line in '%s': %s" % (file, line))
-
-    def __getitem__(self, name):
-        return self.cfg[name]
-
-    def __setitem__(self, name, value):
-        self.cfg[name] = value
-
-    def get(self, name, default = None):
-        if name in self.cfg:
-            return self.cfg[name]
+    def get(self, name, default = None, sections = []):
+        for section in sections + ['default']:
+            try:
+                return config_unicodise(self._cp.get(section, name))
+            except NoOptionError:
+                pass
         return default
 
 class ConfigDumper(object):
