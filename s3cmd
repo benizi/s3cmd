@@ -2625,6 +2625,7 @@ def main():
 
     optparser.add_option(      "--configure", dest="run_configure", action="store_true", help="Invoke interactive (re)configuration tool. Optionally use as '--configure s3://some-bucket' to test access to a specific bucket instead of attempting to list them all.")
     optparser.add_option("-c", "--config", dest="config", metavar="FILE", help="Config file name. Defaults to $HOME/.s3cfg")
+    optparser.add_option("-C", "--config-section", dest="config_sections", metavar="SECTION", help="Configuration sections to parse. Defaults to 'default'")
     optparser.add_option(      "--dump-config", dest="dump_config", action="store_true", help="Dump current configuration after parsing config files and command line options and exit.")
     optparser.add_option(      "--access_key", dest="access_key", help="AWS Access Key")
     optparser.add_option(      "--secret_key", dest="secret_key", help="AWS Secret Key")
@@ -2777,7 +2778,7 @@ def main():
         sys.exit(EX_CONFIG)
 
     try:
-        cfg = Config(options.config, options.access_key, options.secret_key, options.access_token)
+        cfg = Config(options.config, options.access_key, options.secret_key, options.access_token, options.config_sections)
     except ValueError as exc:
         raise ParameterError(unicode(exc))
     except IOError as e:
